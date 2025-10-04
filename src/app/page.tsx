@@ -1,5 +1,7 @@
 "use client";
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 
 type Row = {
   sno: number;
@@ -36,6 +38,11 @@ const customerOptions = [
   "THREAD MANUFACTURING",
   "WEAVING INDUSTRIES",
   "APPAREL MAKERS LTD",
+  "GLOBAL TEXTILES CO",
+  "PREMIUM FABRICS LTD",
+  "QUALITY KNITS INC",
+  "MASTER WEAVERS CORP",
+  "ELITE GARMENTS CO",
 ];
 
 const measurementOptions = ["CM", "INCH"];
@@ -106,7 +113,13 @@ const productOptions = [
   "Skirt",
   "Dress",
   "Socks",
+  "Blouse",
+  "Shorts",
+  "Coat",
+  "Vest",
+  "Uniform",
 ];
+
 type TableColumn = {
   key: string;
   header: string;
@@ -116,6 +129,7 @@ type TableColumn = {
   align?: string;
   options?: string[];
 };
+
 const tableColumns: TableColumn[] = [
   { key: "sno", header: "SNO", width: "w-12", readOnly: true },
   {
@@ -222,7 +236,13 @@ export default function Home() {
   const inputRefs = useRef<(HTMLInputElement | HTMLSelectElement | null)[][]>(
     []
   );
+  const formInputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const datePickerRefs = useRef<(DatePicker | null)[]>([]);
   const remarksRef = useRef<HTMLTextAreaElement | null>(null);
+  const customerDropdownRef = useRef<HTMLDivElement>(null);
+  const measurementDropdownRef = useRef<HTMLDivElement>(null);
+  const productDropdownRefs = useRef<(HTMLDivElement | null)[]>([]);
+
   const [rows, setRows] = useState<Row[]>(
     Array.from({ length: 7 }, (_, i) => ({ sno: i + 1, ...emptyRow }))
   );
@@ -230,23 +250,97 @@ export default function Home() {
     (number | null)[]
   >(Array(rows.length).fill(null));
 
+  // Date states
+  const [orderDate, setOrderDate] = useState<Date | null>(
+    new Date("2025-08-05")
+  );
+  const [poDate, setPoDate] = useState<Date | null>(new Date("2025-08-05"));
+  const [dueDate, setDueDate] = useState<Date | null>(new Date("2025-08-05"));
+  const [datePickerOpen, setDatePickerOpen] = useState<number | null>(null);
+
   const [formData, setFormData] = useState({
     orderNo: "415",
-    orderDate: "2025-08-05",
     customer: "NITHIN KNIT CREATIONS",
     poNo: "254",
-    poDate: "2025-08-05",
-    dueDate: "2025-08-05",
     measurement: "INCH",
   });
   const [customerDropdownOpen, setCustomerDropdownOpen] = useState(false);
   const [measurementDropdownOpen, setMeasurementDropdownOpen] = useState(false);
   const [customerSearch, setCustomerSearch] = useState("");
   const [remarks, setRemarks] = useState("");
+  const [productDropdownOpen, setProductDropdownOpen] = useState<number | null>(
+    null
+  );
+  const [productSearch, setProductSearch] = useState("");
+
+  // New states for dropdown navigation
+  const [customerSelectedIndex, setCustomerSelectedIndex] = useState(-1);
+  const [measurementSelectedIndex, setMeasurementSelectedIndex] = useState(-1);
+  const [productSelectedIndex, setProductSelectedIndex] = useState<number>(-1);
 
   const filteredCustomers = customerOptions.filter((customer) =>
     customer.toLowerCase().includes(customerSearch.toLowerCase())
   );
+
+  // Format date for display
+  const formatDate = (date: Date | null): string => {
+    if (!date) return "";
+    return date.toISOString().split("T")[0];
+  };
+
+  // Scroll to selected option in dropdown
+  useEffect(() => {
+    if (
+      customerDropdownOpen &&
+      customerSelectedIndex >= 0 &&
+      customerDropdownRef.current
+    ) {
+      const selectedElement = customerDropdownRef.current.children[
+        customerSelectedIndex
+      ] as HTMLElement;
+      if (selectedElement) {
+        selectedElement.scrollIntoView({
+          block: "nearest",
+          behavior: "smooth",
+        });
+      }
+    }
+  }, [customerSelectedIndex, customerDropdownOpen]);
+
+  useEffect(() => {
+    if (
+      measurementDropdownOpen &&
+      measurementSelectedIndex >= 0 &&
+      measurementDropdownRef.current
+    ) {
+      const selectedElement = measurementDropdownRef.current.children[
+        measurementSelectedIndex
+      ] as HTMLElement;
+      if (selectedElement) {
+        selectedElement.scrollIntoView({
+          block: "nearest",
+          behavior: "smooth",
+        });
+      }
+    }
+  }, [measurementSelectedIndex, measurementDropdownOpen]);
+
+  useEffect(() => {
+    if (
+      productDropdownOpen !== null &&
+      productSelectedIndex >= 0 &&
+      productDropdownRefs.current[productDropdownOpen]
+    ) {
+      const selectedElement = productDropdownRefs.current[productDropdownOpen]
+        ?.children[productSelectedIndex] as HTMLElement;
+      if (selectedElement) {
+        selectedElement.scrollIntoView({
+          block: "nearest",
+          behavior: "smooth",
+        });
+      }
+    }
+  }, [productSelectedIndex, productDropdownOpen]);
 
   const calculateReqWgt = (row: Omit<Row, "sno">): string => {
     const width = parseFloat(row.width) || 0;
@@ -281,6 +375,121 @@ export default function Home() {
     }
   };
 
+  const onkeyFormKeyDown = (e: React.KeyboardEvent, index: number) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+
+      // If date picker is open, close it and move to next
+      if (datePickerOpen !== null) {
+        setDatePickerOpen(null);
+        const nextIndex = index + 1;
+        if (formFields[nextIndex] && formInputRefs.current[nextIndex]) {
+          formInputRefs.current[nextIndex]?.focus();
+        }
+        return;
+      }
+
+      // If dropdown is open and has selection, apply it
+      if (
+        customerDropdownOpen &&
+        customerSelectedIndex >= 0 &&
+        filteredCustomers[customerSelectedIndex]
+      ) {
+        handleCustomerSelect(filteredCustomers[customerSelectedIndex]);
+        const nextIndex = index + 1;
+        if (formFields[nextIndex] && formInputRefs.current[nextIndex]) {
+          formInputRefs.current[nextIndex]?.focus();
+        }
+        return;
+      }
+
+      if (
+        measurementDropdownOpen &&
+        measurementSelectedIndex >= 0 &&
+        measurementOptions[measurementSelectedIndex]
+      ) {
+        handleMeasurementSelect(measurementOptions[measurementSelectedIndex]);
+        const nextIndex = index + 1;
+        if (formFields[nextIndex] && formInputRefs.current[nextIndex]) {
+          formInputRefs.current[nextIndex]?.focus();
+        }
+        return;
+      }
+
+      const nextIndex = index + 1;
+      if (formFields[nextIndex]) {
+        const nextField = formFields[nextIndex];
+        const nextRef = formInputRefs.current[nextIndex];
+
+        if (nextRef) {
+          nextRef.focus();
+
+          if (nextField.type === "dropdown") {
+            if (nextField.key === "customer") {
+              setCustomerDropdownOpen(true);
+              setMeasurementDropdownOpen(false);
+              setCustomerSelectedIndex(0);
+            } else if (nextField.key === "measurement") {
+              setCustomerDropdownOpen(false);
+              setMeasurementDropdownOpen(true);
+              setMeasurementSelectedIndex(0);
+            } else {
+              setMeasurementDropdownOpen(false);
+              setCustomerDropdownOpen(false);
+            }
+          } else if (nextField.type === "date") {
+            // Open date picker for date fields
+            setDatePickerOpen(nextIndex);
+            setCustomerDropdownOpen(false);
+            setMeasurementDropdownOpen(false);
+          }
+        }
+      } else {
+        setMeasurementDropdownOpen(false);
+        setCustomerDropdownOpen(false);
+        setDatePickerOpen(null);
+        setTimeout(() => {
+          inputRefs.current[0]?.[1]?.focus();
+        }, 50);
+      }
+    } else if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      // Handle dropdown navigation for form fields
+      const isCustomer = formFields[index].key === "customer";
+      const isMeasurement = formFields[index].key === "measurement";
+
+      if (
+        (isCustomer && customerDropdownOpen) ||
+        (isMeasurement && measurementDropdownOpen)
+      ) {
+        e.preventDefault();
+        const options = isCustomer
+          ? filteredCustomers
+          : formFields[index].options || [];
+        const currentIndex = isCustomer
+          ? customerSelectedIndex
+          : measurementSelectedIndex;
+        let newIndex = currentIndex;
+
+        if (e.key === "ArrowDown") {
+          newIndex = currentIndex < options.length - 1 ? currentIndex + 1 : 0;
+        } else if (e.key === "ArrowUp") {
+          newIndex = currentIndex > 0 ? currentIndex - 1 : options.length - 1;
+        }
+
+        if (isCustomer) {
+          setCustomerSelectedIndex(newIndex);
+        } else {
+          setMeasurementSelectedIndex(newIndex);
+        }
+      }
+    } else if (e.key === "Tab") {
+      // Close dropdowns on tab
+      setCustomerDropdownOpen(false);
+      setMeasurementDropdownOpen(false);
+      setDatePickerOpen(null);
+    }
+  };
+
   const handleChange = (
     index: number,
     field: keyof Omit<Row, "sno">,
@@ -302,6 +511,56 @@ export default function Home() {
     handleFormChange("customer", customer);
     setCustomerDropdownOpen(false);
     setCustomerSearch("");
+    setCustomerSelectedIndex(-1);
+  };
+
+  const handleMeasurementSelect = (measurement: string) => {
+    handleFormChange("measurement", measurement);
+    setMeasurementDropdownOpen(false);
+    setMeasurementSelectedIndex(-1);
+  };
+
+  // Date change handlers
+  const handleOrderDateChange = (date: Date | null) => {
+    setOrderDate(date);
+    setDatePickerOpen(null);
+    // Move to next field after date selection
+    setTimeout(() => {
+      const customerIndex = formFields.findIndex(
+        (field) => field.key === "customer"
+      );
+      if (formInputRefs.current[customerIndex]) {
+        formInputRefs.current[customerIndex]?.focus();
+      }
+    }, 50);
+  };
+
+  const handlePoDateChange = (date: Date | null) => {
+    setPoDate(date);
+    setDatePickerOpen(null);
+    // Move to next field after date selection
+    setTimeout(() => {
+      const dueDateIndex = formFields.findIndex(
+        (field) => field.key === "dueDate"
+      );
+      if (formInputRefs.current[dueDateIndex]) {
+        formInputRefs.current[dueDateIndex]?.focus();
+      }
+    }, 50);
+  };
+
+  const handleDueDateChange = (date: Date | null) => {
+    setDueDate(date);
+    setDatePickerOpen(null);
+    // Move to next field after date selection
+    setTimeout(() => {
+      const measurementIndex = formFields.findIndex(
+        (field) => field.key === "measurement"
+      );
+      if (formInputRefs.current[measurementIndex]) {
+        formInputRefs.current[measurementIndex]?.focus();
+      }
+    }, 50);
   };
 
   const totalPieces = rows.reduce(
@@ -312,51 +571,131 @@ export default function Home() {
     (sum, r) => sum + (parseFloat(r.weight) || 0),
     0
   );
+
   const addRow = () => {
     setRows((prev) => [...prev, { sno: prev.length + 1, ...emptyRow }]);
     setProductNotSelected((prev) => [...prev, null]);
-  };const handleKeyDown = (e: React.KeyboardEvent, rowIndex: number, colIndex: number) => {
-  if (e.key === "Enter") {
-    e.preventDefault();
-    const totalCols = inputRefs.current[rowIndex]?.length || 0;
-    const isLastCol = colIndex === totalCols - 1;
-    const isLastRow = rowIndex === rows.length - 1;
-    const isWeightColumn = tableColumns[colIndex]?.key === "weight";
-    const isRateForColumn = tableColumns[colIndex]?.key === "rateFor";
-    const isProductColumn = tableColumns[colIndex]?.key === "product";
+  };
 
-    if (isProductColumn) {
-      if (productDropdownOpen === rowIndex) {
-        // Check if no product is selected (input is empty or unchanged)
-        const currentProduct = rows[rowIndex].product;
-        if (!currentProduct || !productOptions.includes(currentProduct)) {
-          setProductNotSelected((prev) => {
-            const updated = [...prev];
-            updated[rowIndex] = rowIndex;
-            return updated;
-          });
+  const handleKeyDown = (
+    e: React.KeyboardEvent,
+    rowIndex: number,
+    colIndex: number
+  ) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+
+      // If product dropdown is open and has selection, apply it and move to next field
+      if (productDropdownOpen === rowIndex && productSelectedIndex >= 0) {
+        const filteredProducts = productOptions.filter((product) =>
+          product.toLowerCase().includes(productSearch.toLowerCase())
+        );
+        if (filteredProducts[productSelectedIndex]) {
+          handleChange(
+            rowIndex,
+            "product",
+            filteredProducts[productSelectedIndex]
+          );
+          setProductDropdownOpen(null);
+          setProductSearch("");
+          setProductSelectedIndex(-1);
+
+          // Move to next field
+          let nextColIndex = colIndex + 1;
+          while (
+            nextColIndex < tableColumns.length &&
+            tableColumns[nextColIndex]?.readOnly
+          ) {
+            nextColIndex++;
+          }
+          if (nextColIndex < tableColumns.length) {
+            setTimeout(() => {
+              inputRefs.current[rowIndex]?.[nextColIndex]?.focus();
+            }, 50);
+          }
+          return;
         }
-        setProductDropdownOpen(null);
-        setProductSearch("");
-      } else if (productNotSelected[rowIndex] === rowIndex) {
-        // If product was not selected, move to remarks textarea
-        if (remarksRef.current) {
-          remarksRef.current.focus();
-          setProductNotSelected((prev) => {
-            const updated = [...prev];
-            updated[rowIndex] = null;
-            return updated;
-          });
+      }
+
+      const totalCols = inputRefs.current[rowIndex]?.length || 0;
+      const isLastCol = colIndex === totalCols - 1;
+      const isLastRow = rowIndex === rows.length - 1;
+      const isWeightColumn = tableColumns[colIndex]?.key === "weight";
+      const isRateForColumn = tableColumns[colIndex]?.key === "rateFor";
+      const isProductColumn = tableColumns[colIndex]?.key === "product";
+
+      if (isProductColumn) {
+        if (productDropdownOpen === rowIndex) {
+          const currentProduct = rows[rowIndex].product;
+          if (!currentProduct || !productOptions.includes(currentProduct)) {
+            setProductNotSelected((prev) => {
+              const updated = [...prev];
+              updated[rowIndex] = rowIndex;
+              return updated;
+            });
+          }
+          setProductDropdownOpen(null);
+          setProductSearch("");
+          setProductSelectedIndex(-1);
+        } else if (productNotSelected[rowIndex] === rowIndex) {
+          if (remarksRef.current) {
+            remarksRef.current.focus();
+            setProductNotSelected((prev) => {
+              const updated = [...prev];
+              updated[rowIndex] = null;
+              return updated;
+            });
+          }
+        } else {
+          let nextColIndex = colIndex + 1;
+          while (
+            nextColIndex < totalCols &&
+            tableColumns[nextColIndex]?.readOnly
+          ) {
+            nextColIndex++;
+          }
+          if (nextColIndex < totalCols) {
+            inputRefs.current[rowIndex]?.[nextColIndex]?.focus();
+          } else if (isLastRow) {
+            addRow();
+            setTimeout(() => {
+              inputRefs.current[rowIndex + 1]?.[1]?.focus();
+            }, 50);
+          } else {
+            inputRefs.current[rowIndex + 1]?.[1]?.focus();
+          }
         }
-      } else {
-        // Normal navigation to next non-read-only column
+      } else if (isWeightColumn) {
+        const rateForIndex = tableColumns.findIndex(
+          (col) => col.key === "rateFor"
+        );
+        if (
+          rateForIndex !== -1 &&
+          inputRefs.current[rowIndex]?.[rateForIndex]
+        ) {
+          inputRefs.current[rowIndex][rateForIndex]?.focus();
+          inputRefs.current[rowIndex][rateForIndex]?.dispatchEvent(
+            new Event("focus", { bubbles: true })
+          );
+        }
+      } else if (isRateForColumn) {
+        const rateIndex = tableColumns.findIndex((col) => col.key === "rate");
+        if (rateIndex !== -1 && inputRefs.current[rowIndex]?.[rateIndex]) {
+          inputRefs.current[rowIndex][rateIndex]?.focus();
+        }
+      } else if (!isLastCol) {
         let nextColIndex = colIndex + 1;
-        while (nextColIndex < totalCols && tableColumns[nextColIndex]?.readOnly) {
+        while (
+          nextColIndex < totalCols &&
+          tableColumns[nextColIndex]?.readOnly
+        ) {
           nextColIndex++;
         }
         if (nextColIndex < totalCols) {
           inputRefs.current[rowIndex]?.[nextColIndex]?.focus();
-        } else if (isLastRow) {
+        }
+      } else {
+        if (isLastRow) {
           addRow();
           setTimeout(() => {
             inputRefs.current[rowIndex + 1]?.[1]?.focus();
@@ -365,48 +704,79 @@ export default function Home() {
           inputRefs.current[rowIndex + 1]?.[1]?.focus();
         }
       }
-    } else if (isWeightColumn) {
-      const rateForIndex = tableColumns.findIndex(col => col.key === "rateFor");
-      if (rateForIndex !== -1 && inputRefs.current[rowIndex]?.[rateForIndex]) {
-        inputRefs.current[rowIndex][rateForIndex]?.focus();
-        inputRefs.current[rowIndex][rateForIndex]?.dispatchEvent(new Event("focus", { bubbles: true }));
+    } else if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      // Handle dropdown navigation for product cells
+      const col = tableColumns[colIndex];
+      if (col.type === "dropdown" && productDropdownOpen === rowIndex) {
+        e.preventDefault();
+        const filteredProducts = productOptions.filter((product) =>
+          product.toLowerCase().includes(productSearch.toLowerCase())
+        );
+
+        let newIndex = productSelectedIndex;
+
+        if (e.key === "ArrowDown") {
+          newIndex =
+            productSelectedIndex < filteredProducts.length - 1
+              ? productSelectedIndex + 1
+              : 0;
+        } else if (e.key === "ArrowUp") {
+          newIndex =
+            productSelectedIndex > 0
+              ? productSelectedIndex - 1
+              : filteredProducts.length - 1;
+        }
+
+        setProductSelectedIndex(newIndex);
       }
-    } else if (isRateForColumn) {
-      const rateIndex = tableColumns.findIndex(col => col.key === "rate");
-      if (rateIndex !== -1 && inputRefs.current[rowIndex]?.[rateIndex]) {
-        inputRefs.current[rowIndex][rateIndex]?.focus();
-      }
-    } else if (!isLastCol) {
-      let nextColIndex = colIndex + 1;
-      while (nextColIndex < totalCols && tableColumns[nextColIndex]?.readOnly) {
-        nextColIndex++;
-      }
-      if (nextColIndex < totalCols) {
-        inputRefs.current[rowIndex]?.[nextColIndex]?.focus();
-      }
-    } else {
-      if (isLastRow) {
-        addRow();
-        setTimeout(() => {
-          inputRefs.current[rowIndex + 1]?.[1]?.focus();
-        }, 50);
-      } else {
-        inputRefs.current[rowIndex + 1]?.[1]?.focus();
-      }
+    } else if (e.key === "Tab") {
+      // Close product dropdown on tab
+      setProductDropdownOpen(null);
+      setProductSelectedIndex(-1);
     }
-  }
-};
-  const [productDropdownOpen, setProductDropdownOpen] = useState<number | null>(
-    null
+  };
+
+  // Custom input component for DatePicker to integrate with our ref system
+  const CustomDateInput = ({
+    value,
+    onClick,
+    onChange,
+    onKeyDown,
+    refIndex,
+  }: {
+    value?: string;
+    onClick?: () => void;
+    onChange?: () => void;
+    onKeyDown?: (e: React.KeyboardEvent) => void;
+    refIndex: number;
+  }) => (
+    <input
+      ref={(el) => {
+        formInputRefs.current[refIndex] = el;
+      }}
+      type="text"
+      value={value}
+      onClick={onClick}
+      onChange={onChange}
+      onKeyDown={onKeyDown}
+      onFocus={() => setDatePickerOpen(refIndex)}
+      className="flex-1 px-2 py-1 border border-gray-400 rounded text-sm bg-white min-w-0 cursor-pointer"
+      readOnly
+    />
   );
-  const [productSearch, setProductSearch] = useState("");
+
   const renderFormField = (field: FormField, index: number) => {
     const isCustomer = field.key === "customer";
     const isMeasurement = field.key === "measurement";
+    const isDate = field.type === "date";
     const isOpen = isCustomer ? customerDropdownOpen : measurementDropdownOpen;
     const setOpen = isCustomer
       ? setCustomerDropdownOpen
       : setMeasurementDropdownOpen;
+    const selectedIndex = isCustomer
+      ? customerSelectedIndex
+      : measurementSelectedIndex;
+    const options = isCustomer ? filteredCustomers : field.options || [];
 
     if (field.type === "dropdown") {
       return (
@@ -421,51 +791,130 @@ export default function Home() {
           </label>
           <div className="flex-1 relative">
             <input
+              ref={(el) => {
+                formInputRefs.current[index] = el;
+              }}
               type="text"
               value={
                 isCustomer && isOpen
                   ? customerSearch
                   : formData[field.key as keyof typeof formData]
               }
-              onChange={(e) =>
-                isCustomer &&
-                setCustomerSearch(e.target.value) &&
-                setCustomerDropdownOpen(true)
-              }
-              onFocus={() => isCustomer && setCustomerDropdownOpen(true)}
-              onClick={() => !isCustomer && setOpen(!isOpen)}
+              onChange={(e) => {
+                if (isCustomer) {
+                  setCustomerSearch(e.target.value);
+                  setCustomerDropdownOpen(true);
+                  setCustomerSelectedIndex(0); // Auto-select first option when searching
+                }
+              }}
+              onFocus={() => {
+                if (isCustomer) {
+                  setCustomerDropdownOpen(true);
+                  setCustomerSelectedIndex(0); // Auto-select first option on focus
+                } else if (isMeasurement) {
+                  setMeasurementDropdownOpen(true);
+                  setMeasurementSelectedIndex(0); // Auto-select first option on focus
+                }
+              }}
+              onClick={() => {
+                if (!isCustomer) {
+                  setOpen(!isOpen);
+                  if (isMeasurement) setMeasurementSelectedIndex(0);
+                }
+              }}
+              onKeyDown={(e) => onkeyFormKeyDown(e, index)}
               readOnly={!isCustomer}
               className="w-full px-2 py-1 border border-gray-400 rounded text-sm bg-white cursor-pointer"
               placeholder={isCustomer ? "Search customer..." : undefined}
             />
-            {isOpen && field.options && (
-              <div className="absolute top-full left-0 right-0 bg-white border border-gray-400 rounded-b max-h-40 overflow-y-auto z-10">
-                {(isCustomer ? filteredCustomers : field.options).map(
-                  (option, i) => (
-                    <div
-                      key={i}
-                      className="px-2 py-1 hover:bg-blue-100 cursor-pointer text-sm"
-                      onClick={() => {
-                        if (isCustomer) handleCustomerSelect(option);
-                        else {
-                          handleFormChange(field.key, option);
-                          setOpen(false);
-                        }
-                      }}
-                    >
-                      {option}
-                    </div>
-                  )
-                )}
+            {isOpen && options.length > 0 && (
+              <div
+                ref={isCustomer ? customerDropdownRef : measurementDropdownRef}
+                className="absolute top-full left-0 right-0 bg-white border border-gray-400 rounded-b max-h-40 overflow-y-auto z-10"
+              >
+                {options.map((option, i) => (
+                  <div
+                    key={i}
+                    className={`px-2 py-1 hover:bg-blue-100 cursor-pointer text-sm ${
+                      i === selectedIndex ? "bg-blue-200" : ""
+                    }`}
+                    onClick={() => {
+                      if (isCustomer) {
+                        handleCustomerSelect(option);
+                      } else {
+                        handleMeasurementSelect(option);
+                      }
+                    }}
+                  >
+                    {option}
+                  </div>
+                ))}
               </div>
             )}
           </div>
           <button
-            onClick={() => setOpen(!isOpen)}
+            onClick={() => {
+              setOpen(!isOpen);
+              if (isCustomer && !isOpen) setCustomerSelectedIndex(0);
+              if (isMeasurement && !isOpen) setMeasurementSelectedIndex(0);
+            }}
             className="px-2 py-1 bg-gray-300 hover:bg-gray-400 border border-gray-500 rounded text-xs flex-shrink-0"
           >
             ▼
           </button>
+        </div>
+      );
+    }
+
+    if (isDate) {
+      let dateValue: Date | null = null;
+      let onChangeHandler: (date: Date | null) => void = () => {};
+
+      if (field.key === "orderDate") {
+        dateValue = orderDate;
+        onChangeHandler = handleOrderDateChange;
+      } else if (field.key === "poDate") {
+        dateValue = poDate;
+        onChangeHandler = handlePoDateChange;
+      } else if (field.key === "dueDate") {
+        dateValue = dueDate;
+        onChangeHandler = handleDueDateChange;
+      }
+
+      return (
+        <div
+          key={field.key}
+          className={`flex items-center space-x-2 min-w-0 ${field.grid}`}
+        >
+          <label
+            className={`text-sm font-semibold text-blue-900 ${field.width}`}
+          >
+            {field.label}
+          </label>
+          <div className="flex-1 relative">
+            <DatePicker
+              ref={(el) => {
+                datePickerRefs.current[index] = el;
+              }}
+              selected={dateValue}
+              onChange={onChangeHandler}
+              onKeyDown={(e) => onkeyFormKeyDown(e, index)}
+              open={datePickerOpen === index}
+              onFocus={() => setDatePickerOpen(index)}
+              onClickOutside={() => setDatePickerOpen(null)}
+              customInput={<CustomDateInput refIndex={index} />}
+              showPopperArrow={false}
+              popperClassName="!z-20"
+              calendarClassName="!border !border-gray-400 !rounded !shadow-lg"
+              dayClassName={(date) =>
+                date.getDate() === dateValue?.getDate() &&
+                date.getMonth() === dateValue?.getMonth() &&
+                date.getFullYear() === dateValue?.getFullYear()
+                  ? "!bg-blue-500 !text-white"
+                  : "hover:!bg-blue-100"
+              }
+            />
+          </div>
         </div>
       );
     }
@@ -479,9 +928,13 @@ export default function Home() {
           {field.label}
         </label>
         <input
+          ref={(el) => {
+            formInputRefs.current[index] = el;
+          }}
           type={field.type}
           value={formData[field.key as keyof typeof formData]}
           onChange={(e) => handleFormChange(field.key, e.target.value)}
+          onKeyDown={(e) => onkeyFormKeyDown(e, index)}
           className="flex-1 px-2 py-1 border border-gray-400 rounded text-sm bg-white min-w-0"
         />
       </div>
@@ -560,20 +1013,31 @@ export default function Home() {
             onChange={(e) => {
               setProductSearch(e.target.value);
               setProductDropdownOpen(rowIndex);
+              setProductSelectedIndex(-1); // Auto-select first option when searching
             }}
-            onFocus={() => setProductDropdownOpen(rowIndex)}
+            onFocus={() => {
+              setProductDropdownOpen(rowIndex);
+              setProductSelectedIndex(-1); // Auto-select first option on focus
+            }}
             onKeyDown={(e) => handleKeyDown(e, rowIndex, colIndex)}
             className={`w-full px-1 py-1 text-xs border-0 bg-transparent focus:bg-yellow-100 focus:outline-none ${
               col.align || ""
             }`}
             placeholder="Search product..."
           />
-          {productDropdownOpen === rowIndex && (
-            <div className="absolute top-full left-0 right-0 bg-white border border-gray-400 rounded-b max-h-40 overflow-y-auto z-10">
+          {productDropdownOpen === rowIndex && filteredProducts.length > 0 && (
+            <div
+              ref={(el) => {
+                productDropdownRefs.current[rowIndex] = el;
+              }}
+              className="absolute top-full left-0 right-0 bg-white border border-gray-400 rounded-b max-h-40 overflow-y-auto z-10"
+            >
               {filteredProducts.map((option, i) => (
                 <div
                   key={i}
-                  className="px-2 py-1 hover:bg-blue-100 cursor-pointer text-xs"
+                  className={`px-2 py-1 hover:bg-blue-100 cursor-pointer text-xs ${
+                    i === productSelectedIndex ? "bg-blue-200" : ""
+                  }`}
                   onClick={() => {
                     handleChange(
                       rowIndex,
@@ -582,6 +1046,21 @@ export default function Home() {
                     );
                     setProductDropdownOpen(null);
                     setProductSearch("");
+                    setProductSelectedIndex(-1);
+
+                    // Move to next field after selection
+                    setTimeout(() => {
+                      let nextColIndex = colIndex + 1;
+                      while (
+                        nextColIndex < tableColumns.length &&
+                        tableColumns[nextColIndex]?.readOnly
+                      ) {
+                        nextColIndex++;
+                      }
+                      if (nextColIndex < tableColumns.length) {
+                        inputRefs.current[rowIndex]?.[nextColIndex]?.focus();
+                      }
+                    }, 50);
                   }}
                 >
                   {option}
@@ -618,6 +1097,7 @@ export default function Home() {
       </td>
     );
   };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-200 to-blue-300 p-4">
       <div className="max-w-7xl mx-auto">
@@ -644,11 +1124,21 @@ export default function Home() {
         {/* Form Section */}
         <div className="bg-gradient-to-b from-blue-100 to-blue-200 p-4 border-x-2 border-blue-300">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-            {formFields.slice(0, 3).map(renderFormField)}
+            {formFields
+              .slice(0, 3)
+              .map((field, index) => renderFormField(field, index))}
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-            {formFields.slice(3).map(renderFormField)}
+            {formFields
+              .slice(3)
+              .map((field, index) => renderFormField(field, index + 3))}
           </div>
+          <p className="text-sm text-gray-600">
+            Press <strong>Enter</strong> to move to next field. Use{" "}
+            <strong>Arrow Up/Down</strong> to navigate dropdown options. Press{" "}
+            <strong>Enter</strong> to select highlighted option. Date fields
+            open calendar on focus - use keyboard to navigate and select dates.
+          </p>
         </div>
 
         {/* Table Section */}
