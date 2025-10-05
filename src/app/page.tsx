@@ -1,7 +1,7 @@
 "use client";
 import { useRef, useState, useEffect } from "react";
 import DatePicker from "react-datepicker";
-import "react-datepicker/dist/react-datepicker.css";
+// import "react-datepicker/dist/react-datepicker.css";
 
 type Row = {
   sno: number;
@@ -241,7 +241,7 @@ export default function Home() {
   );
   const formInputRefs = useRef<(HTMLInputElement | null)[]>([]);
   const datePickerRefs = useRef<(DatePicker | null)[]>([]);
-  const remarksRef = useRef<HTMLTextAreaElement | null>(null);
+  const remarksRef = useRef<HTMLInputElement | null>(null);
   const customerDropdownRef = useRef<HTMLDivElement>(null);
   const measurementDropdownRef = useRef<HTMLDivElement>(null);
   const productDropdownRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -286,10 +286,10 @@ export default function Home() {
   );
 
   // Format date for display
-  const formatDate = (date: Date | null): string => {
-    if (!date) return "";
-    return date.toISOString().split("T")[0];
-  };
+  // const formatDate = (date: Date | null): string => {
+  //   if (!date) return "";
+  //   return date.toISOString().split("T")[0];
+  // };
 
   const modalRef = useRef<HTMLDivElement>(null);
 
