@@ -28,21 +28,21 @@ type FormField = {
 };
 
 const customerOptions = [
-  "NITHIN KNIT CREATIONS",
-  "TEXTILE INDUSTRIES LTD",
-  "FASHION GARMENTS PVT LTD",
-  "COTTON MILLS CORPORATION",
-  "FABRIC SOLUTIONS INC",
-  "KNITTING WORKS LIMITED",
-  "GARMENT EXPORTS CO",
-  "THREAD MANUFACTURING",
-  "WEAVING INDUSTRIES",
   "APPAREL MAKERS LTD",
+  "COTTON MILLS CORPORATION",
+  "ELITE GARMENTS CO",
+  "FABRIC SOLUTIONS INC",
+  "FASHION GARMENTS PVT LTD",
+  "GARMENT EXPORTS CO",
   "GLOBAL TEXTILES CO",
+  "KNITTING WORKS LIMITED",
+  "MASTER WEAVERS CORP",
+  "NITHIN KNIT CREATIONS",
   "PREMIUM FABRICS LTD",
   "QUALITY KNITS INC",
-  "MASTER WEAVERS CORP",
-  "ELITE GARMENTS CO",
+  "TEXTILE INDUSTRIES LTD",
+  "THREAD MANUFACTURING",
+  "WEAVING INDUSTRIES",
 ];
 
 const measurementOptions = ["CM", "INCH"];
@@ -103,21 +103,21 @@ const formFields: FormField[] = [
 ];
 
 const productOptions = [
-  "T-Shirt",
-  "Shirt",
-  "Jeans",
-  "Jacket",
-  "Sweater",
-  "Hoodie",
-  "Pants",
-  "Skirt",
-  "Dress",
-  "Socks",
   "Blouse",
-  "Shorts",
   "Coat",
-  "Vest",
+  "Dress",
+  "Hoodie",
+  "Jacket",
+  "Jeans",
+  "Pants",
+  "Shirt",
+  "Shorts",
+  "Skirt",
+  "Socks",
+  "Sweater",
+  "T-Shirt",
   "Uniform",
+  "Vest",
 ];
 
 type TableColumn = {
@@ -220,6 +220,9 @@ const buttons = [
 ];
 
 export default function Home() {
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [focusedButton, setFocusedButton] = useState<"yes" | "cancel">("yes");
+
   const emptyRow: Omit<Row, "sno"> = {
     product: "",
     width: "",
@@ -287,6 +290,14 @@ export default function Home() {
     if (!date) return "";
     return date.toISOString().split("T")[0];
   };
+
+  const modalRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (showConfirmModal && modalRef.current) {
+      modalRef.current.focus();
+    }
+  }, [showConfirmModal]);
 
   // Scroll to selected option in dropdown
   useEffect(() => {
@@ -634,6 +645,7 @@ export default function Home() {
               return updated;
             });
           }
+
           setProductDropdownOpen(null);
           setProductSearch("");
           setProductSelectedIndex(-1);
@@ -881,6 +893,8 @@ export default function Home() {
         onChangeHandler = handleDueDateChange;
       }
 
+      
+
       return (
         <div
           key={field.key}
@@ -1072,6 +1086,116 @@ export default function Home() {
       );
     }
 
+    const handleTableKeyDown = (
+        e: React.KeyboardEvent,
+        rowIndex: number,
+        colIndex: number
+      ) => {
+        const col = tableColumns[colIndex];
+        const totalCols = tableColumns.length;
+        const totalRows = rows.length;
+
+        const isDropdown = col.type === "dropdown" && col.options;
+
+        // Handle dropdown navigation first
+        if (isDropdown && productDropdownOpen === rowIndex) {
+          const filteredProducts = col.options!.filter((product) =>
+            product.toLowerCase().includes(productSearch.toLowerCase())
+          );
+          if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+            e.preventDefault();
+            let newIndex = productSelectedIndex;
+            if (e.key === "ArrowDown") {
+              newIndex =
+                productSelectedIndex < filteredProducts.length - 1
+                  ? productSelectedIndex + 1
+                  : 0;
+            } else {
+              newIndex =
+                productSelectedIndex > 0
+                  ? productSelectedIndex - 1
+                  : filteredProducts.length - 1;
+            }
+            setProductSelectedIndex(newIndex);
+            return;
+          } else if (e.key === "Enter") {
+            e.preventDefault();
+            if (filteredProducts[productSelectedIndex]) {
+              handleChange(
+                rowIndex,
+                col.key as keyof Omit<Row, "sno">,
+                filteredProducts[productSelectedIndex]
+              );
+              setProductDropdownOpen(null);
+              setProductSearch("");
+              setProductSelectedIndex(-1);
+
+              // Move to next editable cell
+              let nextCol = colIndex + 1;
+              while (nextCol < totalCols && tableColumns[nextCol].readOnly)
+                nextCol++;
+              if (nextCol < totalCols) {
+                inputRefs.current[rowIndex][nextCol]?.focus();
+              }
+            }
+            return;
+          }
+        }
+
+        // Arrow Up / Down moves between rows (skip readOnly columns)
+        // Arrow Up / Down moves to previous/next editable column in same row
+if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+  e.preventDefault();
+  let nextCol = colIndex;
+  if (e.key === "ArrowDown") {
+    // Next column (wrap around to first if at end)
+    nextCol = (colIndex + 1) % totalCols;
+  } else {
+    // Previous column (wrap around to last if at start)
+    nextCol = colIndex === 0 ? totalCols - 1 : colIndex - 1;
+  }
+  // Skip readOnly columns
+  while (nextCol < totalCols && tableColumns[nextCol]?.readOnly) {
+    nextCol = (nextCol + 1) % totalCols;
+  }
+  if (inputRefs.current[rowIndex]?.[nextCol]) {
+    inputRefs.current[rowIndex][nextCol]?.focus();
+  }
+  return;
+}
+
+        // Enter moves to next editable cell in the same row
+        if (e.key === "Enter") {
+          e.preventDefault();
+          let nextCol = colIndex + 1;
+          while (nextCol < totalCols && tableColumns[nextCol].readOnly)
+            nextCol++;
+          if (nextCol < totalCols) {
+            inputRefs.current[rowIndex][nextCol]?.focus();
+          } else {
+            // Move to first editable cell in next row
+            const nextRow = rowIndex + 1;
+            if (nextRow < totalRows) {
+              let firstCol = 0;
+              while (firstCol < totalCols && tableColumns[firstCol].readOnly)
+                firstCol++;
+              inputRefs.current[nextRow][firstCol]?.focus();
+            } else {
+              // Last row → optionally add a new row
+              addRow();
+              setTimeout(() => {
+                let firstCol = 0;
+                while (firstCol < totalCols && tableColumns[firstCol].readOnly)
+                  firstCol++;
+                inputRefs.current[rowIndex + 1][firstCol]?.focus();
+              }, 50);
+            }
+          }
+        }
+
+        // Tab should just move normally; no dropdown interference
+      };
+
     return (
       <td key={col.key} className="border border-gray-300 px-1 py-1">
         <input
@@ -1088,8 +1212,8 @@ export default function Home() {
               e.target.value
             )
           }
-          onKeyDown={(e) => handleKeyDown(e, rowIndex, colIndex)}
-          className={`w-full px-1 py-1 text-xs border-0 bg-transparent focus:bg-yellow-100 focus:outline-none ${
+
+              onKeyDown={(e) => handleTableKeyDown(e, rowIndex, colIndex)}          className={`w-full px-1 py-1 text-xs border-0 bg-transparent focus:bg-yellow-100 focus:outline-none ${
             col.align || ""
           }`}
           readOnly={col.readOnly}
@@ -1190,11 +1314,17 @@ export default function Home() {
             <label className="text-sm font-semibold text-blue-900 w-20 mt-1">
               REMARKS
             </label>
-            <textarea
+            <input
               ref={remarksRef}
               value={remarks}
               onChange={(e) => setRemarks(e.target.value)}
-              className="flex-1 px-2 py-1 border border-gray-400 rounded text-sm bg-white h-16 resize-none"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  setShowConfirmModal(true); // ✅ show popup every time Enter is pressed
+                }
+              }}
+              className="flex-1 px-2 py-1 border border-gray-400 rounded text-sm bg-white"
               placeholder="Enter remarks here..."
             />
           </div>
@@ -1218,6 +1348,59 @@ export default function Home() {
           </div>
         </div>
       </div>
+      {showConfirmModal && (
+        <div
+          ref={modalRef}
+          className="fixed inset-0 flex items-center justify-center bg-black/50"
+          onKeyDown={(e) => {
+            if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
+              setFocusedButton((prev) => (prev === "yes" ? "cancel" : "yes"));
+            }
+            if (e.key === "Enter") {
+              if (focusedButton === "yes") {
+                setShowConfirmModal(false);
+                alert("Your order saved successfully!")
+                // navigate("/next-page"); // Optional action
+              } else {
+                setShowConfirmModal(false);
+              }
+            }
+          }}
+          tabIndex={-1}
+        >
+          <div className="bg-white p-4 rounded shadow-lg text-center outline-none">
+            <p className="text-sm text-gray-800 mb-3">
+              Are you sure you to save this order?
+            </p>
+
+            <div className="flex justify-center gap-3">
+              <button
+                className={`px-3 py-1 rounded ${
+                  focusedButton === "cancel"
+                    ? "bg-gray-400 text-white"
+                    : "bg-gray-300"
+                }`}
+                onClick={() => setShowConfirmModal(false)}
+              >
+                Cancel
+              </button>
+              <button
+                className={`px-3 py-1 rounded ${
+                  focusedButton === "yes"
+                    ? "bg-blue-600 text-white"
+                    : "bg-blue-400"
+                }`}
+                onClick={() => {
+                  setShowConfirmModal(false);
+                  // navigate("/next-page");
+                }}
+              >
+                Yes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
