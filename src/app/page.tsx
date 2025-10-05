@@ -1,7 +1,7 @@
 "use client";
 import { useRef, useState, useEffect } from "react";
 import DatePicker from "react-datepicker";
-// import "react-datepicker/dist/react-datepicker.css";
+import "react-datepicker/dist/react-datepicker.css";
 
 type Row = {
   sno: number;
@@ -286,10 +286,10 @@ export default function Home() {
   );
 
   // Format date for display
-  // const formatDate = (date: Date | null): string => {
-  //   if (!date) return "";
-  //   return date.toISOString().split("T")[0];
-  // };
+  const formatDate = (date: Date | null): string => {
+    if (!date) return "";
+    return date.toISOString().split("T")[0];
+  };
 
   const modalRef = useRef<HTMLDivElement>(null);
 
