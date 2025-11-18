@@ -65,7 +65,6 @@ interface OrderData {
   OrderDetail: OrderDetailItem[];
 }
 
-
 const customerOptions = [
   "APPAREL MAKERS LTD",
   "COTTON MILLS CORPORATION",
@@ -262,23 +261,22 @@ export default function Home() {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [focusedButton, setFocusedButton] = useState<"yes" | "cancel">("yes");
   const [orderHead, setOrderHead] = useState({
-  OrderNo: "",
-  OrderDate: "",
-  CustomerName: "",
-  CustomerMobileNo: "",
-  PartyOrderNo: "",
-  PartyOrderDate: "",
-  Measurement: "INCH",
-  Remarks: "",
-  TotalOrderPiece: 0,
-  TotalOrderWeight: "0",
-  JobStatus: "",
-  ModuleEntryCode: "TRANS-ORDER",
-  CompanyId: 1,
-  FinancialPeriod: "",
-  UserId_UserHead: 15,
-});
-
+    OrderNo: "",
+    OrderDate: "",
+    CustomerName: "",
+    CustomerMobileNo: "",
+    PartyOrderNo: "",
+    PartyOrderDate: "",
+    Measurement: "INCH",
+    Remarks: "",
+    TotalOrderPiece: 0,
+    TotalOrderWeight: "0",
+    JobStatus: "",
+    ModuleEntryCode: "TRANS-ORDER",
+    CompanyId: 1,
+    FinancialPeriod: "",
+    UserId_UserHead: 15,
+  });
 
   const emptyRow: Omit<Row, "sno"> = {
     product: "",
@@ -667,7 +665,9 @@ export default function Home() {
     if (e.key === "Enter") {
       e.preventDefault();
 
-      // If product dropdown is open and has selection, apply it and move to next field
+      const currentColumnKey = tableColumns[colIndex]?.key;
+      const isProductCol = currentColumnKey === "product";
+
       if (productDropdownOpen === rowIndex && productSelectedIndex >= 0) {
         const filteredProducts = productOptions.filter((product) =>
           product.toLowerCase().includes(productSearch.toLowerCase())
@@ -694,6 +694,20 @@ export default function Home() {
             setTimeout(() => {
               inputRefs.current[rowIndex]?.[nextColIndex]?.focus();
             }, 50);
+          }
+          return;
+        }
+      } else if (isProductCol) {
+        const currentProduct = rows[rowIndex].product.trim();
+
+        if (!currentProduct) {
+          setProductDropdownOpen(null);
+          setProductSearch("");
+          setProductSelectedIndex(-1);
+
+          if (remarksRef.current) {
+            remarksRef.current.focus();
+            remarksRef.current.select();
           }
           return;
         }
@@ -987,6 +1001,7 @@ export default function Home() {
               ref={(el) => {
                 datePickerRefs.current[index] = el;
               }}
+              dateFormat="dd/MM/yyyy"
               selected={dateValue}
               onChange={onChangeHandler}
               onKeyDown={(e) => onkeyFormKeyDown(e, index)}
