@@ -1,7 +1,7 @@
 "use client";
 import { useRef, useState, useEffect } from "react";
 import DatePicker from "react-datepicker";
-import "react-datepicker/dist/react-datepicker.css";
+import { orderDetails, saveOrder } from "./api";
 
 type Row = {
   sno: number;
@@ -913,11 +913,9 @@ export default function Home() {
               }}
               onFocus={() => {
                 if (isCustomer) {
-                  // Don't auto-open dropdown on focus
                   setCustomerSelectedIndex(0);
                 } else if (isMeasurement) {
                   setMeasurementDropdownOpen(true);
-                  setMeasurementSelectedIndex(0);
                 }
               }}
               onClick={() => {
@@ -1120,20 +1118,16 @@ export default function Home() {
             onChange={(e) => {
               const val = e.target.value;
               setProductSearch(val);
-
               if (val.trim() !== "") {
                 setProductDropdownOpen(rowIndex);
                 setProductSelectedIndex(0);
-              } else {
-                setProductDropdownOpen(null);
-                setProductSelectedIndex(-1);
               }
             }}
             onFocus={() => {
               // Only open dropdown if input has value
               if (row[col.key as keyof Row] || productSearch.trim() !== "") {
-                setProductDropdownOpen(rowIndex);
-                setProductSelectedIndex(0);
+                setProductDropdownOpen(null);
+                setProductSelectedIndex(-1);
               } else {
                 setProductDropdownOpen(null);
                 setProductSelectedIndex(-1);
@@ -1505,6 +1499,7 @@ export default function Home() {
           </div>
         </div>
       )}
+      {/* <button onClick={()=>saveOrder(orderDetails)}>Save</button> */}
     </div>
   );
 }
