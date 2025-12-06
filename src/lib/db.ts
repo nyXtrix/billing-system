@@ -1,4 +1,4 @@
-import mysql from 'mysql2/promise';
+import mysql, { RowDataPacket } from 'mysql2/promise';
 
 // Create connection pool (lazy initialization)
 let pool: mysql.Pool | null = null;
@@ -27,9 +27,9 @@ export function getPool(): mysql.Pool {
 }
 
 // Helper function to execute queries
-export async function query<T = any>(
+export async function query<T = unknown>(
   sql: string,
-  params?: any[]
+  params?: unknown[]
 ): Promise<T> {
   const connection = await getPool().getConnection();
   try {
@@ -159,7 +159,7 @@ export async function initializeTables(): Promise<void> {
       'SELECT COUNT(*) as count FROM measurements'
     );
     
-    if ((measurements as any)[0].count === 0) {
+    if ((measurements as RowDataPacket[])[0].count === 0) {
       await connection.execute(`
         INSERT INTO measurements (MeasurementName) VALUES 
         ('INCH'), ('CM'), ('MM'), ('METER')

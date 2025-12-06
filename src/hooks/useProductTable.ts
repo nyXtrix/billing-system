@@ -149,21 +149,23 @@ export const useProductTable = (products: string[] = [], initialRows: number = 7
       }
     }
 
-    // Arrow Up / Down moves between rows (skip readOnly columns)
+    // Arrow Up / Down moves between columns (skip readOnly columns)
     if (e.key === "ArrowDown" || e.key === "ArrowUp") {
       e.preventDefault();
       let nextCol = colIndex;
+      
       if (e.key === "ArrowDown") {
-        // Next column (wrap around to first if at end)
-        nextCol = (colIndex + 1) % totalCols;
+        // Next column
+        do {
+            nextCol = (nextCol + 1) % totalCols;
+        } while (tableColumns[nextCol]?.readOnly && nextCol !== colIndex);
       } else {
-        // Previous column (wrap around to last if at start)
-        nextCol = colIndex === 0 ? totalCols - 1 : colIndex - 1;
+        // Previous column
+        do {
+            nextCol = nextCol === 0 ? totalCols - 1 : nextCol - 1;
+        } while (tableColumns[nextCol]?.readOnly && nextCol !== colIndex);
       }
-      // Skip readOnly columns
-      while (nextCol < totalCols && tableColumns[nextCol]?.readOnly) {
-        nextCol = (nextCol + 1) % totalCols;
-      }
+
       if (inputRefs.current[rowIndex]?.[nextCol]) {
         inputRefs.current[rowIndex][nextCol]?.focus();
       }

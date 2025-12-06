@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { ResultSetHeader, RowDataPacket } from 'mysql2';
 import { query } from '@/lib/db';
 
-// GET /api/customers - Fetch all customers
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
     const search = searchParams.get('search');
 
     let sql = 'SELECT * FROM customers';
-    let params: any[] = [];
+    const params: (string | number | null)[] = [];
 
     if (search) {
       sql += ' WHERE CustomerName LIKE ?';
@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
 
     sql += ' ORDER BY CustomerName ASC';
 
-    const customers = await query(sql, params);
+    const customers = await query<RowDataPacket[]>(sql, params);
 
     return NextResponse.json({
       Status: 'Success',
@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const result = await query(
+    const result = await query<ResultSetHeader>(
       'INSERT INTO customers (CustomerName, MobileNo, Address) VALUES (?, ?, ?)',
       [CustomerName, MobileNo || '', Address || '']
     );
@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       Status: 'Success',
       Message: 'Customer created successfully',
-      CustomerId: (result as any).insertId,
+      CustomerId: result.insertId,
     });
   } catch (error) {
     console.error('Error creating customer:', error);

@@ -24,7 +24,7 @@ interface OrderFormProps {
 
 // Custom input for DatePicker
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const CustomDateInput = React.forwardRef(({ value, onClick, onKeyDown, manualRef, manualOnKeyDown, manualOnFocus }: any, ref: any) => (
+const CustomDateInput = React.forwardRef(({ value, onClick, onKeyDown, manualRef, manualOnKeyDown, manualOnFocus, placeholder }: any, ref: any) => (
   <div className="flex items-center space-x-2 min-w-0">
       <input
       ref={(el) => {
@@ -47,6 +47,7 @@ const CustomDateInput = React.forwardRef(({ value, onClick, onKeyDown, manualRef
       }}
       className="flex-1 px-2 py-1 border border-gray-400 rounded text-sm bg-white min-w-0 cursor-pointer focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
       readOnly
+      placeholder={placeholder}
       />
   </div>
 ));
@@ -61,7 +62,6 @@ export const OrderForm: React.FC<OrderFormProps> = ({
   onFocusNext,
   measurementRef,
 }) => {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [datePickerOpen, setDatePickerOpen] = useState<string | null>(null);
   const [customerDropdownOpen, setCustomerDropdownOpen] = useState(false);
   const [measurementDropdownOpen, setMeasurementDropdownOpen] = useState(false);
@@ -230,6 +230,7 @@ export const OrderForm: React.FC<OrderFormProps> = ({
               selected={dates[field.key as keyof typeof dates]}
               onChange={(date) => handleDateChange(field.key, date)}
               dateFormat="dd/MM/yyyy"
+              placeholderText="Select Date"
               customInput={
                   <CustomDateInput 
                     manualRef={(el: HTMLInputElement) => { formInputRefs.current[index] = el; }} 

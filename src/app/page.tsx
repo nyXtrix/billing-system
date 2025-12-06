@@ -10,7 +10,7 @@ import { InputModal } from "@/components/ui/InputModal";
 import { useProductTable } from "@/hooks/useProductTable";
 import { useProductsAndCustomers } from "@/hooks/useProductsAndCustomers";
 import { saveOrder, fetchOrder } from "./api/orders/client";
-import { OrderData, OrderDetailItem, Row } from "@/types";
+import { OrderData, OrderDetailItem, Row, OrderHead } from "@/types";
 
 export default function Home() {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -19,7 +19,7 @@ export default function Home() {
   const [validationMessage, setValidationMessage] = useState("");
   
   // Load products and customers from database
-  const { products, customers, loading: dataLoading } = useProductsAndCustomers();
+  const { products, customers } = useProductsAndCustomers();
   
   // Order Form State
   const [formData, setFormData] = useState({
@@ -34,9 +34,9 @@ export default function Home() {
     poDate: Date | null;
     dueDate: Date | null;
   }>({
-    orderDate: new Date(),
-    poDate: new Date(),
-    dueDate: new Date(),
+    orderDate: null,
+    poDate: null,
+    dueDate: null,
   });
 
   const [remarks, setRemarks] = useState("");
@@ -117,6 +117,53 @@ export default function Home() {
     console.log("=== VALIDATION PASSED ===");
     // All validations passed, show confirmation modal
     setShowConfirmModal(true);
+  };
+
+  const handleNew = () => {
+      // Reset Form Data
+      setFormData({
+          orderNo: "",
+          customer: "",
+          poNo: "",
+          measurement: "INCH",
+      });
+
+      // Reset Dates
+      setDates({
+          orderDate: null,
+          poDate: null,
+          dueDate: null,
+      });
+
+      // Reset Remarks
+      setRemarks("");
+
+      // Reset Table Rows
+      // We need to recreate the initial empty rows structure
+      const initialRows = Array.from({ length: 7 }, (_, i) => ({
+          sno: i + 1,
+          product: "",
+          width: "",
+          length: "",
+          flop: "",
+          gauge: "",
+          remarks: "",
+          pieces: "",
+          weight: "",
+          reqWgt: "",
+          rateFor: "Piece",
+          rate: "",
+      }));
+      // Cast to Row[] if needed, but the structure matches
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      tableState.setRows(initialRows as any);
+      
+      // Also reset product selection state if exposed, but useProductTable handles internal state mostly.
+      // Ideally useProductTable should expose a reset function, but setRows works for data.
+      // We might need to reset productNotSelected array too if we want to clear red highlights.
+      if (tableState.setProductNotSelected) {
+          tableState.setProductNotSelected(Array(7).fill(null));
+      }
   };
 
   const handleOpen = () => {
@@ -273,7 +320,7 @@ export default function Home() {
       const totalWeight = tableState.rows.reduce((sum, r) => sum + (parseFloat(r.weight) || 0), 0);
 
       // Prepare OrderHead (note: DueDate is optional)
-      const orderHead: any = {
+      const orderHead: OrderHead = {
         OrderNo: formData.orderNo || "NEW",
         OrderDate: formatDateToAPI(dates.orderDate),
         CustomerName: formData.customer || "",
@@ -284,6 +331,7 @@ export default function Home() {
         Remarks: remarks || "",
         TotalOrderPiece: totalPieces,
         TotalOrderWeight: totalWeight.toFixed(3),
+        JobStatus: "Pending",
         ModuleEntryCode: "TRANS-ORDER",
         CompanyId: 1,
         FinancialPeriod: "25-26",
@@ -300,9 +348,10 @@ export default function Home() {
         .filter(row => row.product.trim() !== "")
         .map((row, index) => {
           // Generate AutoIncrement for new items: "new_{index}_{timestamp}"
-          const autoInc = row.autoIncrement 
-            ? row.autoIncrement.toString()
-            : `new_${index + 1}_${Date.now().toString().slice(-8)}`;
+          // AutoIncrement should be a number. For new items, we can send 0 or any number
+          // as the backend ignores it for insertions (it uses insertId).
+          // Existing items will have their original AutoIncrement number.
+          const autoInc = row.autoIncrement ? row.autoIncrement : 0;
           
           return {
             Sno: index + 1,
@@ -311,13 +360,13 @@ export default function Home() {
             Width: row.width || "0",
             Length: row.length || "0",
             Flop: row.flop || "0",
-            Gauge: row.gauge || "0",
+            Gauge: parseFloat(row.gauge || "0"),
             NoOfBackColors: "",
             NoOfFrontColors: "",
             Remarks: row.remarks || "",
-            OrderPiece: row.pieces || "0",
+            OrderPiece: parseFloat(row.pieces || "0"),
             OrderWeight: row.weight || "0.000",
-            RequiredWeight: 0,
+            RequiredWeight: "0",
             RateFor: row.rateFor.toUpperCase(),
             Rate: row.rate || "0",
           };
@@ -401,7 +450,7 @@ export default function Home() {
           </div>
         </div>
 
-        <ActionBar onSave={handleSave} onOpen={handleOpen} />
+        <ActionBar onSave={handleSave} onOpen={handleOpen} onNew={handleNew} />
         {/* Hidden button to trigger load for testing/demo if needed, or bind to Open in ActionBar */}
         <button onClick={handleOpen} className="hidden" id="load-btn">Load</button>
       </div>

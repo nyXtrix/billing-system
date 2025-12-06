@@ -16,11 +16,17 @@ export function useProductsAndCustomers() {
         ]);
 
         // Extract product names
-        const productNames = productsData.map((p: any) => p.ProductName);
+        interface Product {
+          ProductName: string;
+        }
+        const productNames = productsData.map((p: Product) => p.ProductName);
         setProducts(productNames);
 
         // Extract customer names
-        const customerNames = customersData.map((c: any) => c.CustomerName);
+        interface Customer {
+          CustomerName: string;
+        }
+        const customerNames = customersData.map((c: Customer) => c.CustomerName);
         setCustomers(customerNames);
       } catch (error) {
         console.error('Error loading products and customers:', error);

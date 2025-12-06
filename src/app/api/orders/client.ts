@@ -1,5 +1,6 @@
 // Client-side helper functions for orders API
 const API_BASE = '/api';
+import { OrderData } from "../../../types";
 
 // Fetch order by order number
 export const fetchOrder = async (orderNo: string | number) => {
@@ -21,8 +22,10 @@ export const fetchOrder = async (orderNo: string | number) => {
   }
 };
 
+
+
 // Save or update order
-export const saveOrder = async (orderData: any, isUpdate: boolean = false) => {
+export const saveOrder = async (orderData: OrderData, isUpdate: boolean = false) => {
   console.log(`${isUpdate ? 'Updating' : 'Creating'} order...`);
   console.log('Order data:', orderData);
   

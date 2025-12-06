@@ -1,3 +1,4 @@
+import { ResultSetHeader } from 'mysql2';
 import { query } from '../lib/db';
 
 export async function seedOrders() {
@@ -1358,7 +1359,7 @@ export async function seedOrders() {
   for (const order of sampleOrders) {
     try {
       // Insert order head
-      const result = await query(
+      const result = await query<ResultSetHeader>(
         `INSERT INTO order_head (OrderDate, CustomerName, CustomerMobileNo, PartyOrderNo, 
          PartyOrderDate, DueDate, Measurement, Remarks, TotalOrderPiece, TotalOrderWeight, 
          JobStatus, ModuleEntryCode, CompanyId, FinancialPeriod, UserId_UserHead) 
@@ -1382,7 +1383,7 @@ export async function seedOrders() {
         ]
       );
 
-      const orderNo = (result as any).insertId;
+      const orderNo = result.insertId;
 
       // Insert order details
       for (const detail of order.details) {

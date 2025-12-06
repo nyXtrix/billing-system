@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { ResultSetHeader } from 'mysql2';
 import { query } from '@/lib/db';
 
 // GET /api/products - Fetch all products
@@ -8,7 +9,7 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search');
 
     let sql = 'SELECT * FROM products';
-    let params: any[] = [];
+    const params: (string | number | null)[] = [];
 
     if (search) {
       sql += ' WHERE ProductName LIKE ?';
@@ -53,7 +54,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       Status: 'Success',
       Message: 'Product created successfully',
-      ProductId: (result as any).insertId,
+      ProductId: (result as ResultSetHeader).insertId,
     });
   } catch (error) {
     console.error('Error creating product:', error);

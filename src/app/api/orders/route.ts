@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
+import { ResultSetHeader, RowDataPacket } from 'mysql2';
 
 // GET /api/orders - Fetch all orders or a specific order
 export async function GET(request: NextRequest) {
@@ -9,12 +10,12 @@ export async function GET(request: NextRequest) {
 
     if (orderNo) {
       // Fetch specific order
-      const orderHead = await query(
+      const orderHead = await query<RowDataPacket[]>(
         'SELECT * FROM order_head WHERE OrderNo = ?',
         [orderNo]
       );
       
-      const orderDetail = await query(
+      const orderDetail = await query<RowDataPacket[]>(
         'SELECT * FROM order_detail WHERE OrderNo = ?',
         [orderNo]
       );
@@ -26,7 +27,7 @@ export async function GET(request: NextRequest) {
       });
     } else {
       // Fetch all orders
-      const orders = await query('SELECT * FROM order_head ORDER BY OrderNo DESC LIMIT 100');
+      const orders = await query<RowDataPacket[]>('SELECT * FROM order_head ORDER BY OrderNo DESC LIMIT 100');
       return NextResponse.json({
         Status: 'Success',
         Orders: orders,
@@ -55,7 +56,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Insert new order
-    const result = await query(
+    const result = await query<ResultSetHeader>(
       `INSERT INTO order_head (OrderDate, CustomerName, CustomerMobileNo, PartyOrderNo, 
        PartyOrderDate, DueDate, Measurement, Remarks, TotalOrderPiece, TotalOrderWeight, 
        JobStatus, ModuleEntryCode, CompanyId, FinancialPeriod, UserId_UserHead) 
@@ -79,11 +80,11 @@ export async function POST(request: NextRequest) {
       ]
     );
 
-    const newOrderNo = (result as any).insertId;
+    const newOrderNo = result.insertId;
 
     // Insert order details
     for (const detail of OrderDetail) {
-      await query(
+      await query<ResultSetHeader>(
         `INSERT INTO order_detail (OrderNo, Sno, ProductName, Width, Length, Flop, Gauge, 
          NoOfBackColors, NoOfFrontColors, Remarks, OrderPiece, OrderWeight, RequiredWeight, 
          RateFor, Rate) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -135,7 +136,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // Update existing order
-    await query(
+    await query<ResultSetHeader>(
       `UPDATE order_head SET OrderDate = ?, CustomerName = ?, CustomerMobileNo = ?, 
        PartyOrderNo = ?, PartyOrderDate = ?, DueDate = ?, Measurement = ?, Remarks = ?, 
        TotalOrderPiece = ?, TotalOrderWeight = ?, JobStatus = ? WHERE OrderNo = ?`,
@@ -156,10 +157,10 @@ export async function PUT(request: NextRequest) {
     );
 
     // Delete existing details and insert new ones
-    await query('DELETE FROM order_detail WHERE OrderNo = ?', [OrderHead.OrderNo]);
+    await query<ResultSetHeader>('DELETE FROM order_detail WHERE OrderNo = ?', [OrderHead.OrderNo]);
 
     for (const detail of OrderDetail) {
-      await query(
+      await query<ResultSetHeader>(
         `INSERT INTO order_detail (OrderNo, Sno, ProductName, Width, Length, Flop, Gauge, 
          NoOfBackColors, NoOfFrontColors, Remarks, OrderPiece, OrderWeight, RequiredWeight, 
          RateFor, Rate) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
